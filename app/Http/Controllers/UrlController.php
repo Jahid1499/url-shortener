@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Url;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class UrlController extends Controller
 {
@@ -12,7 +14,9 @@ class UrlController extends Controller
      */
     public function index()
     {
-        //
+        $user = Auth::user();
+        $urls = Url::where('user_id', $user->id)->get();
+        return view('urls.index', compact('urls'));
     }
 
     /**
@@ -20,7 +24,38 @@ class UrlController extends Controller
      */
     public function create()
     {
-        //
+        return view('urls.create');
+    }
+
+    public function shorten(Request $request)
+    {
+        $request->validate([
+            'url' => 'required|url|max:255',
+        ]);
+
+        $user = Auth::user();
+
+        $url = new Url([
+            'original_url' => $request->input('url'),
+            'code' => $this->generateUniqueCode(),
+            'user_id' => $user->id,
+        ]);
+
+        $url->save();
+
+        return redirect()->back()
+            ->with('shortened_url', route('url.redirect', ['code' => $url->code]))
+            ->with('original_url', $url->original_url);
+    }
+
+    public function redirect($code)
+    {
+        $url = Url::where('code', $code)->first();
+        if (!$url) {
+            abort(404);
+        }
+        $url->increment('clicks');
+        return redirect($url->original_url);
     }
 
     /**
@@ -58,8 +93,23 @@ class UrlController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Url $url)
+    public function destroy($id)
     {
-        //
+        $url = Url::findOrFail($id);
+        if (Auth::user()->id !== $url->user_id) {
+            return redirect()->back()->with('error', 'Unauthorized to delete url');
+        }
+
+        $url->delete();
+        return redirect()->back()->with('success', 'URL deleted successfully.');
+    }
+
+    private function generateUniqueCode($length = 6)
+    {
+        do {
+            $code = Str::random($length);
+        } while (Url::where('code', $code)->exists());
+
+        return $code;
     }
 }
