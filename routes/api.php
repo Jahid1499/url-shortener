@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\UrlController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +16,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/auth/login', [UserController::class, 'Login']);
+Route::post('/auth/registration', [UserController::class, 'Registration']);
+
+Route::group(['middleware'=> 'tokenVerify'], function (){
+    Route::get('/home', [UrlController::class, 'index']);
+    Route::post('/shorten', [UrlController::class, 'shorten']);
+    Route::delete('/shorten/{id}', [UrlController::class, 'destroy']);
+
+    Route::get('/{code}', [UrlController::class, 'redirect'])->where('code', '[A-Za-z0-9]+');
 });
+
+Route::get('/{code}', [UrlController::class, 'redirect'])->where('code', '[A-Za-z0-9]+');
