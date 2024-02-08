@@ -14,8 +14,8 @@ class UrlController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        $urls = Url::where('user_id', $user->id)->get();
+//        $user = Auth::user();
+        $urls = Url::where('user_id', 1)->get();
         return view('urls.index', compact('urls'));
     }
 
